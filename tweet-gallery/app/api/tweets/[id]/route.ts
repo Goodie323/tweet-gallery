@@ -4,14 +4,16 @@ import { isAdminSession } from "@/lib/session";
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAdminSession()) {
+  const isAuth = await isAdminSession();
+  if (!isAuth) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }
 
+  const { id } = await params;
   const admin = supabaseAdmin();
-  const { error } = await admin.from("tweets").delete().eq("id", params.id);
+  const { error } = await admin.from("tweets").delete().eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -21,12 +23,14 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAdminSession()) {
+  const isAuth = await isAdminSession();
+  if (!isAuth) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }
 
+  const { id } = await params;
   const body = await req.json();
   const allowed = ["category", "notes", "featured"];
   const updates: Record<string, unknown> = {};
@@ -38,7 +42,7 @@ export async function PATCH(
   const { data, error } = await admin
     .from("tweets")
     .update(updates)
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 
