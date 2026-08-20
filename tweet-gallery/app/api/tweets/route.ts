@@ -26,7 +26,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminSession()) {
+  const isAuth = await isAdminSession();
+  if (!isAuth) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }
 

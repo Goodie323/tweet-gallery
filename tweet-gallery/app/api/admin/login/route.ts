@@ -11,6 +11,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  createAdminSession();
+  await createAdminSession();
   return NextResponse.json({ ok: true });
 }

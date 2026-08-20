@@ -14,12 +14,19 @@ function verify(signed: string): boolean {
   const [value, hmac] = signed.split(".");
   if (!value || !hmac) return false;
   const expected = crypto.createHmac("sha256", secret).update(value).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expected));
+  
+  try {
+    return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }
 
-export function createAdminSession() {
+export async function createAdminSession() {
   const token = sign("admin");
-  cookies().set(COOKIE_NAME, token, {
+  const cookieStore = await cookies();
+  
+  cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -28,12 +35,14 @@ export function createAdminSession() {
   });
 }
 
-export function clearAdminSession() {
-  cookies().delete(COOKIE_NAME);
+export async function clearAdminSession() {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
 }
 
-export function isAdminSession(): boolean {
-  const token = cookies().get(COOKIE_NAME)?.value;
+export async function isAdminSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return false;
   return verify(token);
 }
