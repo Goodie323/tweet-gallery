@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-fraunces: "Fraunces", serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+body {
+  background-color: #0b0c0a;
+  color: #edeae0;
+}
+
+/* Catalog stamp — the signature element. Every entry is numbered like a
+   physical archive accession, because these are literally sequential
+   community submissions. */
+.stamp {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: #7c8363;
+  border: 1px solid #2a2c22;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.card-hairline {
+  border: 1px solid #2a2c22;
+}
+
+.card-hairline:hover {
+  border-color: #c9a227;
+  transition: border-color 200ms ease;
+}
+
+:focus-visible {
+  outline: 2px solid #c9a227;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
