@@ -6,8 +6,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const isAuth = await isAdminSession();
-  if (!isAuth) {
+  if (!isAdminSession()) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }
 
@@ -25,8 +24,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const isAuth = await isAdminSession();
-  if (!isAuth) {
+  if (!isAdminSession()) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }
 
