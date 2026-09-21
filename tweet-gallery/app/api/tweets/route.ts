@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { isAdminSession } from "@/lib/session";
-
-// Extracts the numeric tweet ID from any standard x.com / twitter.com URL.
-function extractTweetId(url: string): string | null {
-  const match = url.match(/status\/(\d+)/);
-  return match ? match[1] : null;
-}
-
-function extractHandle(url: string): string | null {
-  const match = url.match(/(?:x\.com|twitter\.com)\/([^\/]+)\/status/);
-  return match ? match[1] : null;
-}
+import { extractTweetId, extractHandle } from "@/lib/tweet";
 
 export async function GET() {
   const { data, error } = await supabase
@@ -26,8 +16,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const isAuth = await isAdminSession();
-  if (!isAuth) {
+  if (!isAdminSession()) {
     return NextResponse.json({ error: "Not authorized." }, { status: 401 });
   }
 
@@ -61,4 +50,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ tweet: data });
-} 
+}

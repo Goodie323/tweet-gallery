@@ -15,6 +15,10 @@ export default async function AdminPage() {
     new Set((tweets ?? []).map((t) => t.category).filter(Boolean))
   ) as string[];
 
+  const byClicks = [...(tweets ?? [])].sort(
+    (a, b) => (b.clicks ?? 0) - (a.clicks ?? 0)
+  );
+
   return (
     <main className="min-h-screen bg-ink px-6 py-16 md:px-16">
       <header className="mb-10 flex items-center justify-between max-w-4xl">
@@ -31,9 +35,9 @@ export default async function AdminPage() {
         <AdminForm existingCategories={categories} />
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted uppercase tracking-wide">
-            {tweets?.length ?? 0} entries
+            {tweets?.length ?? 0} entries · sorted by clicks
           </p>
-          <AdminList tweets={tweets ?? []} />
+          <AdminList tweets={byClicks} />
         </div>
       </div>
     </main>

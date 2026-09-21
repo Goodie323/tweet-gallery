@@ -24,4 +24,5 @@ export type TweetEntry = {
   featured: boolean;
   notes: string | null;
   added_at: string;
+  clicks: number;
 };

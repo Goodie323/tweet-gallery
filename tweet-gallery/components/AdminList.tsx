@@ -36,7 +36,8 @@ export default function AdminList({ tweets }: { tweets: TweetEntry[] }) {
             <p className="truncate text-paper">{t.url}</p>
             <p className="text-xs text-muted">
               {t.category || "Uncategorized"} ·{" "}
-              {new Date(t.added_at).toLocaleDateString()}
+              {new Date(t.added_at).toLocaleDateString()} ·{" "}
+              <span className="text-gold">{t.clicks ?? 0} clicks</span>
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">

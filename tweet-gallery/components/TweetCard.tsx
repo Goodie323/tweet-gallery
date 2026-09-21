@@ -1,8 +1,8 @@
 import { Tweet } from "react-tweet";
 import type { TweetEntry } from "@/lib/supabase";
+import TrackClick from "./TrackClick";
 
 function accessionNumber(index: number): string {
-  // Archive-style accession code, e.g. "No. 014"
   return `No. ${String(index + 1).padStart(3, "0")}`;
 }
 
@@ -24,9 +24,11 @@ export default function TweetCard({
         )}
       </div>
 
-      <div className="tweet-embed [&_.react-tweet-theme]:!bg-transparent">
-        <Tweet id={entry.tweet_id} />
-      </div>
+      <TrackClick id={entry.id}>
+        <div className="tweet-embed [&_.react-tweet-theme]:!bg-transparent">
+          <Tweet id={entry.tweet_id} />
+        </div>
+      </TrackClick>
 
       <div className="flex items-center justify-between pt-2 border-t border-line text-xs text-muted">
         {entry.category && (
