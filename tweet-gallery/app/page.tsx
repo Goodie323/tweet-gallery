@@ -30,6 +30,12 @@ export default async function GalleryPage() {
         <a href="/admin" className="hover:text-gold">
           Curator access →
         </a>
+               
+          href="/recap"
+          className="inline-block mt-4 text-xs text-gold hover:underline"
+        >
+          Read this week's recap →
+        </a>
       </footer>
     </main>
   );
