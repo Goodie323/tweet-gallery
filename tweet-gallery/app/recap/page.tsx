@@ -97,7 +97,7 @@ export default async function RecapPage() {
                     <p className="text-paper text-sm font-medium">
                       {list[0].name ?? handle}
                     </p>
-                    
+                    <a
                       href={"https://x.com/" + handle}
                       target="_blank"
                       rel="noreferrer"
@@ -125,7 +125,7 @@ export default async function RecapPage() {
                             {i.entry.category}
                           </span>
                         )}
-                        
+                        <a
                           href={i.entry.url}
                           target="_blank"
                           rel="noreferrer"

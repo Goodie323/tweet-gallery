@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import GalleryGrid from "@/components/GalleryGrid";
 
@@ -22,12 +23,12 @@ export default async function GalleryPage() {
           from the content hub, kept here so they don't get lost in the
           scroll.
         </p>
-        
+        <Link
           href="/recap"
           className="inline-block mt-4 text-xs text-gold hover:underline"
         >
           Read this week's recap →
-        </a>
+        </Link>
       </header>
 
       <Suspense fallback={<p className="text-muted text-sm">Loading…</p>}>
@@ -36,9 +37,9 @@ export default async function GalleryPage() {
 
       <footer className="mt-20 pt-6 border-t border-line text-xs text-muted flex justify-between">
         <span>Curated by hand. No bots, no auto-scraping.</span>
-        <a href="/admin" className="hover:text-gold">
+        <Link href="/admin" className="hover:text-gold">
           Curator access →
-        </a>
+        </Link>
       </footer>
     </main>
   );
