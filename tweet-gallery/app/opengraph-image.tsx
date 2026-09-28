@@ -41,7 +41,7 @@ export default async function OGImage() {
               border: "1px solid #2A2C22",
               borderRadius: 2,
               padding: "6px 14px",
-              width: "fit-content",
+              alignSelf: "flex-start",
               letterSpacing: 2,
             }}
           >
@@ -65,8 +65,8 @@ export default async function OGImage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 44, color: "#C9A227" }}>{count}</div>
-            <div style={{ fontSize: 20, color: "#8A8C7D" }}>
+            <div style={{ display: "flex", fontSize: 44, color: "#C9A227" }}>{count}</div>
+            <div style={{ display: "flex", fontSize: 20, color: "#8A8C7D" }}>
               {count === 1 ? "entry" : "entries"}
             </div>
           </div>
