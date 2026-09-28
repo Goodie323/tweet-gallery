@@ -1,6 +1,6 @@
 import { getRecap, type RecapItem } from "@/lib/recap";
 
-export const revalidate = 3600; // rebuilt at most once an hour
+export const revalidate = 3600;
 
 export const metadata = {
   title: "Weekly Recap — The Archive",
@@ -98,7 +98,7 @@ export default async function RecapPage() {
                       {list[0].name ?? handle}
                     </p>
                     
-                      href={`https://x.com/${handle}`}
+                      href={"https://x.com/" + handle}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs text-muted hover:text-gold"
