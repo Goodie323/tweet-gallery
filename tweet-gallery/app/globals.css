@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --font-fraunces: "Fraunces", serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-fraunces: var(--font-fraunces-next), serif;
+  --font-mono: var(--font-mono-next), monospace;
 }
 
 body {
