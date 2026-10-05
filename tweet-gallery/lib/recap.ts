@@ -7,11 +7,14 @@ export type RecapItem = {
   name: string | null;
   avatar: string | null;
   text: string | null;
-  blurb: string;
 };
 
+export type ArticleSegment =
+  | { type: "text"; value: string }
+  | { type: "link"; value: string; url: string; handle: string };
+
 export type Recap = {
-  intro: string | null;
+  paragraphs: ArticleSegment[][];
   items: RecapItem[];
   since: Date;
   aiUsed: boolean;
@@ -22,16 +25,60 @@ function clean(text: string) {
   return text.replace(/https:\/\/t\.co\/\w+/g, "").replace(/\s+/g, " ").trim();
 }
 
-function excerpt(text: string, max = 200) {
+function excerpt(text: string, max = 160) {
   return text.length > max ? text.slice(0, max).trimEnd() + "…" : text;
 }
 
-async function summarize(items: RecapItem[], statsText: string | null) {
+// Turns text containing {{tweetId}} tokens into text/link segments. The URL
+// always comes from our own stored entry — never something the model wrote —
+// so a hallucinated or malformed token just gets dropped, not followed.
+function parseParagraph(raw: string, items: RecapItem[]): ArticleSegment[] {
+  const byId = new Map(items.map((i) => [i.entry.tweet_id, i]));
+  const segments: ArticleSegment[] = [];
+  const regex = /\{\{(\d+)\}\}/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(raw)) !== null) {
+    const [full, tweetId] = match;
+    if (match.index > lastIndex) {
+      segments.push({ type: "text", value: raw.slice(lastIndex, match.index) });
+    }
+    const item = byId.get(tweetId);
+    if (item) {
+      segments.push({
+        type: "link",
+        value: "↗",
+        url: item.entry.url,
+        handle: item.handle,
+      });
+    }
+    lastIndex = match.index + full.length;
+  }
+  if (lastIndex < raw.length) {
+    segments.push({ type: "text", value: raw.slice(lastIndex) });
+  }
+  return segments;
+}
+
+// Deterministic, no-AI version — used whenever GEMINI_API_KEY isn't set or
+// the API call fails, so /recap always renders something.
+function buildFallbackArticle(items: RecapItem[]): string {
+  if (items.length === 0) return "";
+  const sentences = items.map((i) => {
+    const said =
+      i.entry.notes || (i.text ? excerpt(i.text) : "shared something worth a look");
+    return `@${i.handle}{{${i.entry.tweet_id}}} ${said}.`;
+  });
+  return sentences.join(" ");
+}
+
+async function writeArticle(items: RecapItem[], statsText: string | null) {
   const key = process.env.GEMINI_API_KEY;
   if (!key || items.length === 0) return null;
 
   const payload = items.map((i) => ({
-    id: i.entry.tweet_id,
+    tweet_id: i.entry.tweet_id,
     creator: i.name ?? i.handle,
     handle: i.handle,
     category: i.entry.category,
@@ -40,12 +87,16 @@ async function summarize(items: RecapItem[], statsText: string | null) {
   }));
 
   const systemInstruction =
-    "You write the weekly recap for a community archive of curated tweets. " +
-    "Given a JSON list of tweets and optional weekly headline stats, return JSON " +
-    'shaped as {"intro": string, "items": [{"id": string, "blurb": string}]}. ' +
-    "intro: 2-3 sentences capturing the week's themes, weaving in the headline stats if given. " +
-    "blurb: one sentence per tweet, naming the creator, saying what they said or showed. " +
-    "Only use what is in the provided text and stats. Never invent facts, numbers, or quotes. " +
+    "You write a short bulletin-style recap for a community archive of curated tweets, " +
+    "in the voice of someone writing their own bulletin submission — flowing prose, not a list. " +
+    'Return ONLY JSON shaped as {"article": string}. ' +
+    "The article is 2-3 short paragraphs (separated by a blank line) of plain text that reads " +
+    "naturally, referencing creators by @handle inline as part of normal sentences " +
+    "(e.g. 'today on pyth, @handle flagged a huge surge in price action'). " +
+    "Immediately after each @handle mention that references a specific tweet, insert the literal " +
+    "token {{tweet_id}} with no space, using the exact tweet_id given for that tweet, " +
+    "e.g. '@handle{{1234567890}}'. Every tweet in the input must be referenced exactly once. " +
+    "Only use what is in the given text, notes and stats — never invent facts, numbers, or quotes. " +
     "Never make token price predictions or give financial advice.";
 
   try {
@@ -59,14 +110,12 @@ async function summarize(items: RecapItem[], statsText: string | null) {
           contents: [
             {
               role: "user",
-              parts: [
-                { text: JSON.stringify({ stats: statsText, tweets: payload }) },
-              ],
+              parts: [{ text: JSON.stringify({ stats: statsText, tweets: payload }) }],
             },
           ],
           generationConfig: {
             responseMimeType: "application/json",
-            maxOutputTokens: 1500,
+            maxOutputTokens: 1200,
           },
         }),
       }
@@ -75,8 +124,8 @@ async function summarize(items: RecapItem[], statsText: string | null) {
     const data = await res.json();
     const raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed as { intro: string; items: { id: string; blurb: string }[] };
+    const parsed = JSON.parse(raw) as { article: string };
+    return parsed.article || null;
   } catch {
     return null;
   }
@@ -117,19 +166,18 @@ export async function getRecap(): Promise<Recap> {
         name: tweet?.user?.name ?? null,
         avatar: tweet?.user?.profile_image_url_https ?? null,
         text,
-        blurb: entry.notes || (text ? excerpt(text) : `Shared by @${handle}.`),
       };
     })
   );
 
-  const ai = await summarize(items, statsText);
-  if (ai) {
-    const byId = new Map(ai.items.map((i) => [i.id, i.blurb]));
-    items.forEach((i) => {
-      const b = byId.get(i.entry.tweet_id);
-      if (b) i.blurb = b;
-    });
-  }
+  const aiArticle = await writeArticle(items, statsText);
+  const rawArticle = aiArticle ?? buildFallbackArticle(items);
 
-  return { intro: ai?.intro ?? null, items, since, aiUsed: !!ai, statsText };
+  const paragraphs = rawArticle
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => parseParagraph(p, items));
+
+  return { paragraphs, items, since, aiUsed: !!aiArticle, statsText };
 }
