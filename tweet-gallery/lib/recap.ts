@@ -27,7 +27,7 @@ function excerpt(text: string, max = 200) {
 }
 
 async function summarize(items: RecapItem[], statsText: string | null) {
-  const key = process.env.ANTHROPIC_API_KEY;
+  const key = process.env.GEMINI_API_KEY;
   if (!key || items.length === 0) return null;
 
   const payload = items.map((i) => ({
@@ -39,37 +39,43 @@ async function summarize(items: RecapItem[], statsText: string | null) {
     text: i.text,
   }));
 
+  const systemInstruction =
+    "You write the weekly recap for a community archive of curated tweets. " +
+    "Given a JSON list of tweets and optional weekly headline stats, return JSON " +
+    'shaped as {"intro": string, "items": [{"id": string, "blurb": string}]}. ' +
+    "intro: 2-3 sentences capturing the week's themes, weaving in the headline stats if given. " +
+    "blurb: one sentence per tweet, naming the creator, saying what they said or showed. " +
+    "Only use what is in the provided text and stats. Never invent facts, numbers, or quotes. " +
+    "Never make token price predictions or give financial advice.";
+
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1500,
-        system:
-          "You write the weekly recap for a community archive of curated tweets. " +
-          "Given a JSON list of tweets and optional weekly headline stats, return ONLY " +
-          'valid JSON, no markdown fences, shaped as {"intro": string, "items": [{"id": string, "blurb": string}]}. ' +
-          "intro: 2-3 sentences capturing the week's themes, weaving in the headline stats if given. " +
-          "blurb: one sentence per tweet, naming the creator, saying what they said or showed. " +
-          "Only use what is in the provided text and stats. Never invent facts, numbers, or quotes. " +
-          "Never make token price predictions or give financial advice.",
-        messages: [
-          {
-            role: "user",
-            content: JSON.stringify({ stats: statsText, tweets: payload }),
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: JSON.stringify({ stats: statsText, tweets: payload }) },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 1500,
           },
-        ],
-      }),
-    });
+        }),
+      }
+    );
     if (!res.ok) return null;
     const data = await res.json();
-    const raw: string = data?.content?.[0]?.text ?? "";
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    const raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
     return parsed as { intro: string; items: { id: string; blurb: string }[] };
   } catch {
     return null;
