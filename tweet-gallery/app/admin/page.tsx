@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import AdminForm from "@/components/AdminForm";
 import AdminList from "@/components/AdminList";
+import AdminStatsForm from "@/components/AdminStatsForm";
 import SignOutButton from "@/components/SignOutButton";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,12 @@ export default async function AdminPage() {
     .from("tweets")
     .select("*")
     .order("added_at", { ascending: false });
+
+  const { data: statsRow } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", "weekly_stats")
+    .maybeSingle();
 
   const categories = Array.from(
     new Set((tweets ?? []).map((t) => t.category).filter(Boolean))
@@ -30,6 +37,8 @@ export default async function AdminPage() {
         </div>
         <SignOutButton />
       </header>
+
+      <AdminStatsForm initial={statsRow?.value ?? ""} />
 
       <div className="grid md:grid-cols-[380px_1fr] gap-8 max-w-4xl">
         <AdminForm existingCategories={categories} />

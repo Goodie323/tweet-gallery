@@ -12,7 +12,7 @@ function fmt(d: Date) {
 }
 
 export default async function RecapPage() {
-  const { intro, items, since } = await getRecap();
+  const { intro, items, since, statsText } = await getRecap();
   const now = new Date();
 
   const groups = new Map<string, RecapItem[]>();
@@ -74,6 +74,15 @@ export default async function RecapPage() {
             </div>
           )}
         </header>
+
+        {statsText && (
+          <div className="mb-12 p-5 card-hairline rounded-sm bg-surface">
+            <p className="stamp mb-3 inline-block">This Week's Numbers</p>
+            <p className="text-sm text-paper/80 whitespace-pre-line leading-relaxed">
+              {statsText}
+            </p>
+          </div>
+        )}
 
         {items.length === 0 ? (
           <p className="text-muted text-sm">

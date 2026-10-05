@@ -14,19 +14,12 @@ create table if not exists tweets (
 
 create index if not exists tweets_added_at_idx on tweets (added_at desc);
 
--- Row Level Security: anyone can read, nobody can write via the anon key.
--- All writes go through /api routes using the service role key, which
--- bypasses RLS and is gated behind the admin password + session cookie
--- (except the click-tracking endpoint, which is intentionally public).
 alter table tweets enable row level security;
 
 create policy "Public read access"
   on tweets for select
   using (true);
 
--- Atomic click increment, used by /api/tweets/[id]/click. Doing this as
--- a function avoids a read-then-write race when multiple people click
--- around the same time.
 create or replace function increment_tweet_clicks(row_id uuid)
 returns void as $$
 begin
@@ -34,6 +27,22 @@ begin
 end;
 $$ language plpgsql security definer;
 
--- If you already have a `tweets` table from before this feature, run just
--- this bit to add the column without recreating everything:
+-- New: simple key/value settings table, used for the weekly headline stats
+-- block shown on /recap (e.g. the Pyth bulletin numbers).
+create table if not exists settings (
+  key text primary key,
+  value text,
+  updated_at timestamptz not null default now()
+);
+
+alter table settings enable row level security;
+
+create policy "Public read access on settings"
+  on settings for select
+  using (true);
+
+-- If you already have `tweets` and just need to add what's new, run only this:
 -- alter table tweets add column if not exists clicks integer not null default 0;
+-- create table if not exists settings (key text primary key, value text, updated_at timestamptz not null default now());
+-- alter table settings enable row level security;
+-- create policy "Public read access on settings" on settings for select using (true);

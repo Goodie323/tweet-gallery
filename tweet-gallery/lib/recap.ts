@@ -15,6 +15,7 @@ export type Recap = {
   items: RecapItem[];
   since: Date;
   aiUsed: boolean;
+  statsText: string | null;
 };
 
 function clean(text: string) {
@@ -25,7 +26,7 @@ function excerpt(text: string, max = 200) {
   return text.length > max ? text.slice(0, max).trimEnd() + "…" : text;
 }
 
-async function summarize(items: RecapItem[]) {
+async function summarize(items: RecapItem[], statsText: string | null) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key || items.length === 0) return null;
 
@@ -51,12 +52,18 @@ async function summarize(items: RecapItem[]) {
         max_tokens: 1500,
         system:
           "You write the weekly recap for a community archive of curated tweets. " +
-          "Given a JSON list of tweets, return ONLY valid JSON, no markdown fences, shaped as " +
-          '{"intro": string, "items": [{"id": string, "blurb": string}]}. ' +
-          "intro: 2-3 sentences capturing the week's themes. " +
+          "Given a JSON list of tweets and optional weekly headline stats, return ONLY " +
+          'valid JSON, no markdown fences, shaped as {"intro": string, "items": [{"id": string, "blurb": string}]}. ' +
+          "intro: 2-3 sentences capturing the week's themes, weaving in the headline stats if given. " +
           "blurb: one sentence per tweet, naming the creator, saying what they said or showed. " +
-          "Only use what is in the provided text. Never invent facts, numbers, or quotes.",
-        messages: [{ role: "user", content: JSON.stringify(payload) }],
+          "Only use what is in the provided text and stats. Never invent facts, numbers, or quotes. " +
+          "Never make token price predictions or give financial advice.",
+        messages: [
+          {
+            role: "user",
+            content: JSON.stringify({ stats: statsText, tweets: payload }),
+          },
+        ],
       }),
     });
     if (!res.ok) return null;
@@ -81,6 +88,13 @@ export async function getRecap(): Promise<Recap> {
 
   const entries = (data ?? []) as TweetEntry[];
 
+  const { data: statsRow } = await supabase
+    .from("settings")
+    .select("value")
+    .eq("key", "weekly_stats")
+    .maybeSingle();
+  const statsText = statsRow?.value || null;
+
   const items: RecapItem[] = await Promise.all(
     entries.map(async (entry) => {
       let tweet;
@@ -102,7 +116,7 @@ export async function getRecap(): Promise<Recap> {
     })
   );
 
-  const ai = await summarize(items);
+  const ai = await summarize(items, statsText);
   if (ai) {
     const byId = new Map(ai.items.map((i) => [i.id, i.blurb]));
     items.forEach((i) => {
@@ -111,5 +125,5 @@ export async function getRecap(): Promise<Recap> {
     });
   }
 
-  return { intro: ai?.intro ?? null, items, since, aiUsed: !!ai };
+  return { intro: ai?.intro ?? null, items, since, aiUsed: !!ai, statsText };
 }
